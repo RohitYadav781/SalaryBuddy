@@ -1,0 +1,203 @@
+<div class="calculator-container">
+  <div class="calculator-layout">
+    
+    <!-- LEFT COLUMN: Inputs & Controls -->
+    <div class="card left-pane">
+      <div class="header-row">
+        <h1 class="main-title">Calculator</h1>
+        <button type="button" class="mode-btn" (click)="toggleMode()">
+          {{ isAmountMode ? 'Switch to % Mode' : 'Switch to Amount Mode' }}
+        </button>
+      </div>
+
+      <p class="sub-title">
+        {{ isAmountMode ? 'Calculate New Salary (By %)' : 'Calculate Increment Percentage' }}
+      </p>
+
+      <!-- Old Salary -->
+      <div class="input-group">
+        <label for="oldSalary" class="input-label">Old Salary:</label>
+        <input
+          type="number"
+          id="oldSalary"
+          class="input-field"
+          placeholder="Enter current salary"
+          [(ngModel)]="oldSalary"
+          (input)="runAllCalculations()"
+        />
+      </div>
+
+      <!-- Second Input -->
+      <div class="input-group">
+        <label for="secondInput" class="input-label">
+          {{ isAmountMode ? 'Increment %:' : 'New Salary:' }}
+        </label>
+        <input
+          type="number"
+          id="secondInput"
+          class="input-field"
+          [placeholder]="isAmountMode ? 'Enter %' : 'Enter new salary'"
+          [(ngModel)]="secondInput"
+          (input)="runAllCalculations()"
+        />
+      </div>
+
+      <!-- Deductions Input -->
+      <div class="input-group">
+        <label for="taxRate" class="input-label">Deductions (%):</label>
+        <input
+          type="number"
+          id="taxRate"
+          class="input-field"
+          placeholder="e.g. 10"
+          [(ngModel)]="taxRate"
+          (input)="runAllCalculations()"
+        />
+      </div>
+
+      <!-- Actual Monthly Expenses -->
+      <div class="input-group">
+        <label for="actualExpenses" class="input-label">Your Expenses:</label>
+        <input
+          type="number"
+          id="actualExpenses"
+          class="input-field"
+          placeholder="Total spends"
+          [(ngModel)]="actualExpenses"
+          (input)="evaluateActualExpenses()"
+        />
+      </div>
+
+      <!-- NEW: Counter-Offer Target Input -->
+      <div class="input-group highlight-input">
+        <label for="targetInHand" class="input-label">Target In-Hand:</label>
+        <input
+          type="number"
+          id="targetInHand"
+          class="input-field"
+          placeholder="e.g. 75000"
+          [(ngModel)]="targetInHand"
+          (input)="calculateCounterOffer()"
+        />
+      </div>
+
+      <button type="button" class="calculate-btn" (click)="runAllCalculations()">
+        Calculate All
+      </button>
+
+      @if (errorMessage) {
+        <div class="error-box">{{ errorMessage }}</div>
+      }
+    </div>
+
+    <!-- RIGHT COLUMN: Results & Insights Sidebar -->
+    <div class="card right-pane">
+      
+      @if (!hasCalculated) {
+        <div class="placeholder-box">
+          <p class="placeholder-title">No calculations yet</p>
+          <p class="placeholder-text">Enter your old and new salary details on the left to see your full financial and negotiation plan.</p>
+        </div>
+      } @else {
+        <!-- Increment Summary -->
+        <div class="sidebar-section">
+          <span class="section-badge">Increment</span>
+          <div class="result-highlight">
+            <span class="highlight-main">{{ incrementPercent }}%</span>
+            <span class="highlight-sub">+{{ incrementAmount }} / month</span>
+          </div>
+        </div>
+
+        <!-- NEW: Counter-Offer & Negotiation Card -->
+        @if (negotiationTarget) {
+          <div class="sidebar-section">
+            <span class="section-badge">Offer Negotiation Target</span>
+            <div class="negotiation-card">
+              <div class="negotiation-main">
+                <div>
+                  <span class="nego-label">Ask for Gross Salary</span>
+                  <strong class="nego-val">{{ negotiationTarget.requiredGross }}</strong>
+                </div>
+                <div class="hike-chip">+{{ negotiationTarget.requiredHikePct }}% Hike</div>
+              </div>
+              <div class="negotiation-footer">
+                <span>To net <strong>{{ negotiationTarget.targetInHand }}</strong> after deductions</span>
+                <span>Ask for raise: <strong>+{{ negotiationTarget.grossDifference }}/mo</strong></span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- In-Hand Breakdown -->
+        <div class="sidebar-section">
+          <span class="section-badge">Monthly In-Hand</span>
+          <div class="breakdown-grid">
+            <div class="stat-card">
+              <span class="stat-label">Gross</span>
+              <strong class="stat-val">{{ monthlyBreakdown.grossMonthly }}</strong>
+            </div>
+            <div class="stat-card deduction">
+              <span class="stat-label">Deduction</span>
+              <strong class="stat-val">-{{ monthlyBreakdown.deductions }}</strong>
+            </div>
+            <div class="stat-card highlight">
+              <span class="stat-label">Net In-Hand</span>
+              <strong class="stat-val">{{ monthlyBreakdown.inHandMonthly }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- 50/30/20 Budget Breakdown -->
+        <div class="sidebar-section">
+          <span class="section-badge">50/30/20 Budget Plan</span>
+          <div class="breakdown-grid">
+            <div class="stat-card">
+              <span class="stat-label">Needs (50%)</span>
+              <strong class="stat-val">{{ expenseBreakdown.needs }}</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Wants (30%)</span>
+              <strong class="stat-val">{{ expenseBreakdown.wants }}</strong>
+            </div>
+            <div class="stat-card highlight">
+              <span class="stat-label">Savings (20%)</span>
+              <strong class="stat-val">{{ expenseBreakdown.savings }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remaining Spend Status -->
+        @if (actualExpenses !== null && actualExpenses > 0) {
+          <div class="status-box" [class.deficit]="isDeficit">
+            {{ expenseStatusText }}
+          </div>
+        }
+
+        <!-- City Affordability Module -->
+        @if (cityRecommendation) {
+          <div class="sidebar-section">
+            <span class="section-badge">Recommended Living Options</span>
+            <div class="city-card">
+              <div class="city-header">
+                <span class="city-tier">{{ cityRecommendation.tier }}</span>
+                <span 
+                  class="city-fit" 
+                  [style.backgroundColor]="cityRecommendation.status === 'High Strain' ? '#fde8e8' : '#eaf8ec'"
+                  [style.color]="cityRecommendation.status === 'High Strain' ? '#9b1c1c' : '#15803d'">
+                  {{ cityRecommendation.status }}
+                </span>
+              </div>
+              <p class="city-names">{{ cityRecommendation.cities }}</p>
+              <div class="city-stats">
+                <span>Est. Rent: <strong>{{ cityRecommendation.rentRange }}</strong></span>
+                <span>Savings: <strong>{{ cityRecommendation.savingsPotential }}</strong></span>
+              </div>
+            </div>
+          </div>
+        }
+      }
+
+    </div>
+
+  </div>
+</div>
